@@ -1,68 +1,107 @@
 # motifpath-infra
 
-Terraform configurations for all MotifPath cloud infrastructure, hosted on AWS.
+Terraform infrastructure for MotifPath. All cloud resources are managed here.
 
-| Resource | Service |
-|----------|---------|
-| Compute | EKS |
-| Relational DB | RDS PostgreSQL (core-domain) |
-| Document DB | MongoDB Atlas (event-ingestion) |
-| Container Registry | ECR |
-| CI/CD | GitHub Actions |
+## Infrastructure
 
-> **MSK (Kafka) is deferred — do not provision yet.**
+| Resource | Provider | Purpose |
+|---|---|---|
+| EKS | AWS | Kubernetes cluster (compute) |
+| RDS PostgreSQL | AWS | core-domain service database |
+| MongoDB Atlas | Atlas | event-ingestion service database |
+| ECR | AWS | Container image registry |
+| Secrets Manager | AWS | Credentials and connection strings |
+
+> **Deferred:** MSK (Kafka) — not provisioned at MVP.
+
+## Onboarding
+
+First-time machine setup is handled from `motifpath-specs` — see its
+[README](../motifpath-specs/README.md#onboarding) for the full setup steps
+(global CLAUDE.md + Claude skill installation).
+
+## Branching Model
+
+```
+main  (protected — production releases only)
+dev   (protected — integration branch, target for all feature PRs)
+```
+
+Branch naming — task code is mandatory:
+
+```
+infra/MTP-001/short-description   ← branches from dev
+hotfix/BUG-099/short-description  ← branches from main (critical production fixes only)
+```
+
+After any merge to `main`, the `sync-main-to-dev` workflow opens a PR
+from `main` to `dev` automatically. Review and merge it promptly.
 
 ## Prerequisites
 
-- Terraform >= 1.6
-- AWS CLI authenticated to the target account (`staging` or `production`)
-- Access to S3 state bucket and DynamoDB lock table
-
-## Directory Structure
-
-```
-modules/              reusable Terraform modules (one per resource type)
-environments/
-  staging/            staging environment (mirrors production at reduced scale)
-  production/         production environment
-scripts/              helper scripts for cluster and deployment operations
-```
-
-## Usage
-
-```bash
-cd environments/staging
-terraform init
-terraform plan        # always review the full output
-terraform apply       # only after reviewing plan
-```
-
-**Never** run `terraform apply` against `production` without a reviewed and approved plan in a merged PR.
+- [Terraform 1.7+](https://developer.hashicorp.com/terraform/install)
+- [AWS CLI](https://aws.amazon.com/cli/) — configured with appropriate credentials
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
 ## Environments
 
-| Environment | AWS Account | State Backend |
-|-------------|-------------|---------------|
-| staging | separate account | S3 + DynamoDB locking |
-| production | separate account | S3 + DynamoDB locking |
-
-Changes must be tested in **staging** before applying to **production**.
-
-## Tagging Policy
-
-Every resource must carry these tags:
-
-```hcl
-environment = "staging" | "production"
-project     = "motifpath"
-managed-by  = "terraform"
+```
+environments/
+  staging/      → mirrors production at reduced scale
+  production/   → production environment
 ```
 
-## Key Rules
+Always apply to staging first. Never apply to production without
+a reviewed and approved plan in a PR.
 
-- All resource configurations are extracted to modules in `/modules/` — no inline resources
-- All provider versions are pinned in `required_providers` — no floating versions
-- Secrets come from AWS Secrets Manager — never hardcoded in `.tf` files or committed `.tfvars`
-- Use `for_each` over `count` for resource collections
-- Every module variable has a `description` — no undocumented variables
-- Destroying production resources requires an ADR documenting the decision
+## Commands
+
+```bash
+# Format all Terraform files
+terraform fmt -recursive
+
+# Validate staging configuration
+cd environments/staging && terraform init && terraform validate
+
+# Plan staging changes (always before apply)
+cd environments/staging && terraform plan
+
+# Apply staging changes
+cd environments/staging && terraform apply
+
+# Validate production configuration
+cd environments/production && terraform init && terraform validate
+
+# Plan production changes (requires PR approval before applying)
+cd environments/production && terraform plan
+```
+
+## Workflow
+
+1. Make infrastructure changes in a feature branch
+2. Run `terraform fmt -recursive` and `terraform validate` locally
+3. Open a PR — CI runs format check and validation automatically
+4. Get PR approval
+5. Apply to staging: `cd environments/staging && terraform apply`
+6. Verify staging is healthy
+7. Apply to production: `cd environments/production && terraform apply`
+
+## State Management
+
+Terraform state lives in S3 with DynamoDB locking.
+Never use local state files.
+Staging and production use separate state files and separate AWS accounts.
+
+## Secrets
+
+All secrets are stored in AWS Secrets Manager.
+Never hardcode credentials in Terraform files.
+Never commit `.tfvars` files containing sensitive values — they are gitignored.
+
+## Related Repositories
+
+| Repository | Purpose |
+|---|---|
+| [motifpath-specs](../motifpath-specs) | Platform contracts and architecture decisions |
+| [motifpath-core](../motifpath-core) | Go backend services deployed to EKS |
+| [motifpath-web](../motifpath-web) | Vue 3 frontend deployed to EKS |

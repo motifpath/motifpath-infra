@@ -1,29 +1,53 @@
-# motifpath-infra
+# MotifPath Infra — Claude Code Instructions
 
-Infrastructure as code for Motifpath. All cloud resources are defined here.
+## Purpose
+Terraform configurations for all MotifPath cloud infrastructure.
+AWS-hosted: EKS (compute), RDS Postgres (core-domain), MongoDB Atlas (event-ingestion),
+ECR (container registry), GitHub Actions (CI/CD). MSK (Kafka) is deferred — do not provision yet.
 
-## Hard rules
+## Directory Structure
+```
+modules/              → reusable Terraform modules (one per resource type)
+environments/
+  staging/            → staging environment (mirrors production at reduced scale)
+  production/         → production environment
+scripts/              → helper scripts for cluster and deployment operations
+```
 
-- No secrets in code — ever. Use environment variables injected by CI or a secrets manager
-- `terraform apply` on prod only happens via CI after a PR merge, never manually
-- Every resource must have standard tags: `project`, `env`, `managed-by=terraform`
-- Destructive changes (resource deletion, database migrations) require explicit confirmation in the PR description
+## Terraform Standards
+NEVER write inline resource configurations — always extract to a module in /modules/.
+ALWAYS run `terraform plan` and review the full output before `terraform apply`.
+ALWAYS version-pin all providers in `required_providers` — no floating versions.
+State is stored in S3 with DynamoDB locking — NEVER use local state files.
 
-## Module conventions
+## Tagging Policy
+ALWAYS tag every resource with:
+```
+environment = "staging" | "production"
+project     = "motifpath"
+managed-by  = "terraform"
+```
+Untagged resources will be flagged in cost reviews.
 
-- Each module in `terraform/modules/` is self-contained with its own `variables.tf`, `outputs.tf`, and `README.md`
-- Module inputs have descriptions and type constraints
-- Sensitive outputs are marked `sensitive = true`
+## Secrets
+NEVER hardcode secrets, credentials, or connection strings in Terraform files.
+ALWAYS reference secrets from AWS Secrets Manager.
+NEVER commit .tfvars files containing sensitive values — these are gitignored.
+Sensitive outputs MUST use `sensitive = true`.
 
-## CI / plan workflow
+## Environment Rules
+ALWAYS test infrastructure changes in staging before applying to production.
+NEVER run `terraform apply` against production without a reviewed and approved plan in the PR.
+Staging and production use separate state files and separate AWS accounts.
 
-- PRs trigger `terraform plan` and post the output as a PR comment
-- Merging to main triggers `terraform apply` for dev automatically
-- Staging and prod require manual approval in the GitHub Actions workflow
+## Key Rules
+NEVER use `terraform apply -auto-approve` in any environment.
+NEVER destroy resources in production without an explicit ADR documenting the decision.
+ALWAYS use `for_each` over `count` for resource collections — avoids index-based state issues.
+Module inputs must be documented with `description` on every variable — no undocumented variables.
 
-## How to help
-
-- Flag any resource change that could cause downtime
-- Suggest tagging or naming if it deviates from convention
-- Always recommend `terraform plan` output review before apply
-- Never suggest bypassing the PR-to-apply workflow
+## Branching
+Feature branches target `dev` — NEVER open a PR directly to `main`.
+Hotfix branches are the only exception: `hotfix/BUG-NNN/description` branches from `main`.
+After a hotfix merges to `main`, the sync workflow opens a PR to `dev` automatically — review it promptly.
+Infrastructure hotfixes still require a `terraform plan` review before applying — urgency never skips the plan step.
