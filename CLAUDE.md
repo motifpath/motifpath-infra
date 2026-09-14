@@ -45,6 +45,12 @@ NEVER use `terraform apply -auto-approve` in any environment.
 NEVER destroy resources in production without an explicit ADR documenting the decision.
 ALWAYS use `for_each` over `count` for resource collections — avoids index-based state issues.
 Module inputs must be documented with `description` on every variable — no undocumented variables.
+NEVER reference an ADR, backlog item (PB-NNN), ticket, or spec file by name/number in a Terraform
+comment — state the invariant, constraint, or reason in the comment's own words instead. A doc
+reference goes stale the moment that document is archived or renumbered, and forces every future
+reader (human or AI) into an external lookup to understand code sitting in front of them. Doc
+references belong in commit messages and PR descriptions, which are allowed to age — never in
+the comment itself.
 
 ## Branching
 Feature branches target `dev` — NEVER open a PR directly to `main`.
