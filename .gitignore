@@ -38,3 +38,6 @@ crash.*.log
 .vscode/
 *.swp
 *~
+
+# Local implementation plans (ADR-022) — never committed
+plans/
