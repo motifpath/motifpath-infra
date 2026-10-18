@@ -1,0 +1,32 @@
+#!/bin/bash
+# First-boot setup: Docker with the Compose plugin, swap, and the directories
+# the deploy script expects. The SSM agent, AWS CLI, python3 and curl ship
+# with the image.
+set -euxo pipefail
+
+dnf install -y docker
+mkdir -p /etc/docker
+# Bounded local logs; services that ship to CloudWatch set their own driver.
+cat > /etc/docker/daemon.json <<'JSON'
+{ "log-driver": "local", "log-opts": { "max-size": "10m", "max-file": "3" } }
+JSON
+systemctl enable --now docker
+
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-compose \
+  "https://github.com/docker/compose/releases/download/v${compose_version}/docker-compose-linux-aarch64"
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+docker compose version
+
+# Headroom for short memory spikes, such as a migration while both
+# environments run.
+if [ ! -f /swapfile ]; then
+  dd if=/dev/zero of=/swapfile bs=1M count=${swap_size_mb}
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+mkdir -p /opt/motifpath /etc/motifpath
+chmod 700 /etc/motifpath
