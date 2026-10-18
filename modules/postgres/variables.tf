@@ -18,6 +18,11 @@ variable "allowed_security_group_ids" {
   type        = map(string)
 }
 
+variable "availability_zone" {
+  description = "Zone the single-AZ instance runs in; set to the zone of the instances that query it."
+  type        = string
+}
+
 variable "engine_version" {
   description = "Postgres major version; minor upgrades apply automatically."
   type        = string

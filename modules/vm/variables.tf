@@ -37,6 +37,12 @@ variable "swap_size_mb" {
   default     = 2048
 }
 
+variable "termination_protection" {
+  description = "Refuse API termination of the instance. Turn off for one apply before replacing it on purpose."
+  type        = bool
+  default     = true
+}
+
 variable "compose_version" {
   description = "Docker Compose plugin version installed on first boot, without the leading v."
   type        = string

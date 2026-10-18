@@ -4,6 +4,12 @@
 # with the image.
 set -euxo pipefail
 
+# The instance may come up a moment before its public address routes.
+for attempt in $(seq 30); do
+  curl -fsS --max-time 5 -o /dev/null https://github.com && break
+  sleep 5
+done
+
 dnf install -y docker
 mkdir -p /etc/docker
 # Bounded local logs; services that ship to CloudWatch set their own driver.

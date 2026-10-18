@@ -1,0 +1,30 @@
+set -eu
+env=${environment}
+tag='{{ imageTag }}'
+
+# GitHub's compare API reports the commit as "behind" (or "identical") when
+# it is already contained in the branch.
+on_branch() {
+  curl -fsS --retry 3 "https://api.github.com/repos/${repository}/compare/$1...$tag" |
+    python3 -c 'import json, sys; sys.exit(json.load(sys.stdin)["status"] not in ("behind", "identical"))'
+}
+allowed=
+for branch in ${allowed_branches}; do
+  if on_branch "$branch"; then allowed=$branch; break; fi
+done
+if [ -z "$allowed" ]; then
+  echo "$tag is not on ${allowed_branches}; refusing to deploy it to $env" >&2
+  exit 1
+fi
+echo "$tag is on $allowed"
+
+# Unpacked next to the live copy first, so a failed download never leaves a
+# half-written deploy directory behind.
+d=/opt/motifpath/$env
+rm -rf "$d.next"
+mkdir -p "$d.next"
+curl -fsSL --retry 3 "https://codeload.github.com/${repository}/tar.gz/$tag" |
+  tar -xz -C "$d.next" --strip-components=2 --wildcards '*/deploy/*'
+rm -rf "$d"
+mv "$d.next" "$d"
+bash "$d/deploy.sh" "$env" "$tag"

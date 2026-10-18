@@ -38,3 +38,8 @@ output "web_deploy_role_arn" {
   description = "Role the SPA repository's deploy workflow assumes."
   value       = module.web_deploy_role.arn
 }
+
+output "deploy_document_name" {
+  description = "SSM document motifpath-core's deploy workflow sends."
+  value       = module.deploy_document.name
+}

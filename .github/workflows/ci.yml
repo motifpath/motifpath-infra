@@ -77,12 +77,18 @@ jobs:
         run: terraform init -input=false
 
       # Printed for review, not kept: applies are run by hand.
+      # BUDGET_ALERT_EMAILS is a comma-separated list; Terraform reads a list
+      # variable from the environment only in list syntax, which JSON is.
       - name: Terraform plan
         working-directory: ${{ matrix.root }}
         env:
           TF_VAR_dmarc_record: ${{ vars.DMARC_RECORD }}
-          TF_VAR_budget_alert_emails: ${{ vars.BUDGET_ALERT_EMAILS }}
-        run: terraform plan -input=false -lock=false -no-color
+          BUDGET_ALERT_EMAILS: ${{ vars.BUDGET_ALERT_EMAILS }}
+        run: |
+          TF_VAR_budget_alert_emails=$(jq -cn --arg emails "$BUDGET_ALERT_EMAILS" \
+            '$emails | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != ""))')
+          export TF_VAR_budget_alert_emails
+          terraform plan -input=false -lock=false -no-color
 
   all-checks:
     name: All checks passed

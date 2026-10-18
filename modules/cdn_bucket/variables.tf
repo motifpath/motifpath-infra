@@ -30,3 +30,9 @@ variable "price_class" {
   type        = string
   default     = "PriceClass_All"
 }
+
+variable "cors_allow_any_origin" {
+  description = "Let pages on any origin read the content with fetch or Web Audio, by answering CORS at CloudFront. For public assets only."
+  type        = bool
+  default     = false
+}

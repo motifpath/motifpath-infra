@@ -37,6 +37,9 @@ module "media" {
   domain_name            = local.hosts.media
   zone_id                = var.zone_id
   upload_allowed_origins = ["https://${local.hosts.app}"]
+  # The SPA reads media (voice samples, images) cross-origin from its own
+  # hostname.
+  cors_allow_any_origin = true
 }
 
 module "api_records" {
@@ -55,22 +58,33 @@ module "logs" {
   names = [local.log_group]
 }
 
+module "media_user" {
+  source = "../media_user"
+
+  name       = "${local.name}-media"
+  bucket_arn = module.media.bucket_arn
+}
+
 # Rendered into the environment's secrets file on every deploy.
 module "parameters" {
   source = "../ssm_parameters"
 
   path = "/motifpath/${var.environment}"
   string_parameters = {
-    ECR_REGISTRY    = var.ecr_registry
-    MEDIA_S3_BUCKET = module.media.bucket_name
+    ECR_REGISTRY            = var.ecr_registry
+    MEDIA_S3_BUCKET         = module.media.bucket_name
+    MEDIA_AWS_ACCESS_KEY_ID = module.media_user.access_key_id
   }
   secure_parameters = {
-    DATABASE_URL = "postgres://${local.db_name}:${random_password.database.result}@${var.database_address}:${var.database_port}/${local.db_name}?sslmode=require"
+    DATABASE_URL                = "postgres://${local.db_name}:${random_password.database.result}@${var.database_address}:${var.database_port}/${local.db_name}?sslmode=require"
+    MEDIA_AWS_SECRET_ACCESS_KEY = module.media_user.secret_access_key
   }
   manual_parameters = ["CLERK_SECRET_KEY", "MONGO_URI"]
 }
 
-# What the VM may touch on this environment's behalf.
+# What the VM host (not its containers, which cannot reach the instance role)
+# may touch on this environment's behalf: rendering its secrets and shipping
+# its logs.
 module "instance_access" {
   source = "../iam_role_policy"
 
@@ -86,18 +100,6 @@ module "instance_access" {
         Resource = module.parameters.resource_arns
       },
       {
-        Sid      = "MediaObjects"
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-        Resource = "${module.media.bucket_arn}/*"
-      },
-      {
-        Sid      = "MediaBucket"
-        Effect   = "Allow"
-        Action   = ["s3:ListBucket"]
-        Resource = module.media.bucket_arn
-      },
-      {
         Sid      = "ShipLogs"
         Effect   = "Allow"
         Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
@@ -107,8 +109,19 @@ module "instance_access" {
   })
 }
 
+module "deploy_document" {
+  source = "../deploy_document"
+
+  name             = "${local.name}-deploy"
+  environment      = var.environment
+  repository       = var.core_repository
+  allowed_branches = var.environment == "production" ? ["main"] : ["stage", "main"]
+}
+
 # motifpath-core's deploy workflow, from its GitHub environment of the same
-# name: run the deploy script on the VM and check images exist.
+# name. It can start this environment's deploy document on the VM and nothing
+# else there. Production's role also adds a protecting tag to the images it
+# deploys, so image expiry never removes what production runs.
 module "core_deploy_role" {
   source = "../github_role"
 
@@ -117,15 +130,12 @@ module "core_deploy_role" {
   subjects          = ["repo:${var.core_repository}:environment:${var.environment}"]
   policy_json = jsonencode({
     Version = "2012-10-17"
-    Statement = [
+    Statement = concat([
       {
-        Sid    = "RunDeployScript"
-        Effect = "Allow"
-        Action = "ssm:SendCommand"
-        Resource = [
-          var.vm_instance_arn,
-          "arn:aws:ssm:${var.region}::document/AWS-RunShellScript",
-        ]
+        Sid      = "RunDeployDocument"
+        Effect   = "Allow"
+        Action   = "ssm:SendCommand"
+        Resource = [var.vm_instance_arn, module.deploy_document.arn]
       },
       {
         Sid      = "ReadDeployResult"
@@ -139,7 +149,12 @@ module "core_deploy_role" {
         Action   = ["ecr:DescribeImages"]
         Resource = values(var.ecr_repository_arns)
       },
-    ]
+      ], var.environment == "production" ? [{
+        Sid      = "TagDeployedImages"
+        Effect   = "Allow"
+        Action   = ["ecr:BatchGetImage", "ecr:PutImage"]
+        Resource = values(var.ecr_repository_arns)
+    }] : [])
   })
 }
 

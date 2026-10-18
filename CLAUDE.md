@@ -51,6 +51,13 @@ ALWAYS test infrastructure changes in staging before applying to production.
 NEVER run `terraform apply` against production without a reviewed and approved plan in the PR.
 Staging and production use separate state files in one AWS account; they are kept apart by
 state, resource names, the `environment` tag, and IAM policies scoped per environment.
+They share one VM, so these hold on it:
+- Containers cannot reach the instance role (IMDS hop limit 1). Only the host can, and it can
+  read both environments' secrets. Services get their own narrow credentials (e.g. the
+  per-environment media IAM user); NEVER raise the hop limit or grant a container the role.
+- Deploy roles may only send their environment's fixed deploy document, which takes an image SHA,
+  checks it is on that environment's release branches, and fetches deploy files itself.
+  NEVER grant a deploy role `AWS-RunShellScript` or any document that runs caller-supplied code.
 
 ## Key Rules
 NEVER use `terraform apply -auto-approve` in any environment.

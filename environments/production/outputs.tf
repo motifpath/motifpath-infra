@@ -33,3 +33,8 @@ output "web_deploy_role_arn" {
   description = "Role motifpath-web's deploy workflow assumes."
   value       = module.environment.web_deploy_role_arn
 }
+
+output "deploy_document_name" {
+  description = "SSM document motifpath-core's deploy workflow sends to the VM."
+  value       = module.environment.deploy_document_name
+}

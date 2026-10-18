@@ -58,7 +58,12 @@ resource "aws_instance" "this" {
   subnet_id               = var.subnet_id
   vpc_security_group_ids  = [aws_security_group.this.id]
   iam_instance_profile    = aws_iam_instance_profile.this.name
-  disable_api_termination = true
+  disable_api_termination = var.termination_protection
+  # The Elastic IP is attached only once the instance is running, after
+  # first-boot setup may already be downloading packages. A launch-time
+  # public address gives it a route out from the start; AWS releases it when
+  # the Elastic IP takes over.
+  associate_public_ip_address = true
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
     compose_version = var.compose_version
@@ -67,9 +72,11 @@ resource "aws_instance" "this" {
 
   metadata_options {
     http_tokens = "required"
-    # Containers sit one network hop behind the host; with the default limit
-    # of 1 the AWS SDK inside them cannot reach the instance role.
-    http_put_response_hop_limit = 2
+    # A limit of 1 keeps metadata answers from reaching bridge-networked
+    # containers, so only the host can use the instance role, which can read
+    # both environments' secrets. Services get their own narrower
+    # credentials instead.
+    http_put_response_hop_limit = 1
   }
 
   root_block_device {
@@ -82,8 +89,9 @@ resource "aws_instance" "this" {
 
   lifecycle {
     # A newer AMI or boot script must not silently replace or reboot the VM
-    # both environments run on. Roll either out on purpose with
-    # `terraform apply -replace=...`.
+    # both environments run on. Roll either out on purpose: apply once with
+    # termination_protection = false, then `terraform apply -replace=...`,
+    # then turn protection back on.
     ignore_changes = [ami, user_data]
   }
 }

@@ -45,6 +45,8 @@ resource "aws_db_instance" "this" {
   vpc_security_group_ids = [aws_security_group.this.id]
   publicly_accessible    = false
   multi_az               = false
+  # Same zone as its clients: cross-zone traffic adds latency and is billed.
+  availability_zone = var.availability_zone
 
   backup_retention_period    = var.backup_retention_days
   auto_minor_version_upgrade = true

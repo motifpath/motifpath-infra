@@ -5,13 +5,15 @@
 locals {
   name   = "motifpath"
   region = "us-east-1"
+  # The first zone hosts the VM and the database.
+  availability_zones = ["us-east-1a", "us-east-1b"]
 }
 
 module "network" {
   source = "../../modules/network"
 
   name               = local.name
-  availability_zones = ["us-east-1a", "us-east-1b"]
+  availability_zones = local.availability_zones
 }
 
 module "vm" {
@@ -29,6 +31,7 @@ module "postgres" {
   vpc_id                     = module.network.vpc_id
   subnet_ids                 = module.network.private_subnet_ids
   allowed_security_group_ids = { vm = module.vm.security_group_id }
+  availability_zone          = local.availability_zones[0]
 }
 
 module "dns_zone" {

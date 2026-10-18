@@ -20,8 +20,10 @@ repository creates everything around the VM.
 | S3 + CloudFront (SPA, media) | per env | `app.`/`staging.` and `media.`/`media.staging.` |
 | API DNS records | per env | `api.`, `events.` (and `.staging.`) → the VM |
 | SSM Parameter Store | per env | `/motifpath/<env>/…`, rendered into the env's secrets file at deploy |
+| Media IAM user | per env | core-domain's credentials, limited to that env's media bucket |
+| Deploy document | per env | The only command a deploy role can send to the VM; deploys a SHA from the env's release branches |
 | CloudWatch log groups | per env | `/motifpath/<env>` and `/motifpath/edge` |
-| Deploy roles | per env | motifpath-core (SSM Run Command) and motifpath-web (S3 sync + invalidation) |
+| Deploy roles | per env | motifpath-core (its deploy document; production also tags images it deploys) and motifpath-web (S3 sync + invalidation) |
 
 Not managed here (yet): **MongoDB Atlas** clusters (Flex for production, M0 for staging,
 allow-listed to the VM's Elastic IP) and **Clerk**. Kafka is a Redpanda container per environment
@@ -163,6 +165,18 @@ cd environments/staging && terraform apply
 7. Apply to production: `cd environments/production && terraform apply`
 
 `shared` changes reach both environments at once; review those plans with that in mind.
+
+## Isolation on the shared VM
+
+- Containers cannot reach the instance role: the metadata hop limit is 1, so only the host can
+  use it (to render secrets, pull images and ship logs). core-domain uses its own environment's
+  media IAM user instead.
+- Deploy roles cannot run arbitrary commands. Each environment has one SSM document. It takes only
+  an image SHA, refuses a SHA that is not on that environment's branches (`main` for production;
+  `stage` or `main` for staging), and fetches `deploy/` from that commit on GitHub. Code reaches the
+  host only by being merged to those branches.
+- Production deploys tag their images `production-<sha>`. ECR expires those images only among
+  themselves, so staging builds never push out an image production may need to roll back to.
 
 ## State Management
 

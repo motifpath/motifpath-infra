@@ -1,9 +1,16 @@
 # A private bucket served only through CloudFront, on its own hostname with
 # its own certificate.
 
-locals {
-  # AWS managed cache policy "CachingOptimized".
-  caching_optimized_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+data "aws_cloudfront_cache_policy" "caching_optimized" {
+  name = "Managed-CachingOptimized"
+}
+
+# Adds Access-Control-Allow-Origin: * at the edge. The cache key ignores the
+# Origin header, so S3's own CORS answer would be cached for whichever
+# request came first; setting it at CloudFront gives every response the same
+# header.
+data "aws_cloudfront_response_headers_policy" "simple_cors" {
+  name = "Managed-SimpleCORS"
 }
 
 resource "aws_s3_bucket" "this" {
@@ -37,7 +44,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
 # Browsers upload straight to the bucket with presigned PUT URLs, so the
 # bucket itself has to answer CORS for the app's origin.
 resource "aws_s3_bucket_cors_configuration" "this" {
-  count  = length(var.upload_allowed_origins) > 0 ? 1 : 0
+  for_each = length(var.upload_allowed_origins) > 0 ? toset(["uploads"]) : toset([])
+
   bucket = aws_s3_bucket.this.id
 
   cors_rule {
@@ -98,12 +106,13 @@ resource "aws_cloudfront_distribution" "this" {
   }
 
   default_cache_behavior {
-    target_origin_id       = "s3"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    cache_policy_id        = local.caching_optimized_policy_id
-    compress               = true
+    target_origin_id           = "s3"
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD", "OPTIONS"]
+    cached_methods             = ["GET", "HEAD"]
+    cache_policy_id            = data.aws_cloudfront_cache_policy.caching_optimized.id
+    response_headers_policy_id = var.cors_allow_any_origin ? data.aws_cloudfront_response_headers_policy.simple_cors.id : null
+    compress                   = true
   }
 
   # Client-side routes have no object behind them; S3 answers 403 for a
