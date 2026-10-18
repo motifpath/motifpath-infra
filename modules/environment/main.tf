@@ -23,6 +23,10 @@ resource "random_password" "database" {
 
 module "spa" {
   source = "../cdn_bucket"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
 
   bucket_name     = "${local.name}-web"
   domain_name     = local.hosts.app
@@ -32,6 +36,10 @@ module "spa" {
 
 module "media" {
   source = "../cdn_bucket"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
 
   bucket_name            = "${local.name}-content-media"
   domain_name            = local.hosts.media

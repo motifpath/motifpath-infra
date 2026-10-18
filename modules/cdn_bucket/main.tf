@@ -57,7 +57,11 @@ resource "aws_s3_bucket_cors_configuration" "this" {
   }
 }
 
+# CloudFront only accepts certificates from us-east-1, whatever Region the
+# bucket is in.
 resource "aws_acm_certificate" "this" {
+  provider = aws.us_east_1
+
   domain_name       = var.domain_name
   validation_method = "DNS"
 
@@ -80,6 +84,8 @@ resource "aws_route53_record" "validation" {
 }
 
 resource "aws_acm_certificate_validation" "this" {
+  provider = aws.us_east_1
+
   certificate_arn         = aws_acm_certificate.this.arn
   validation_record_fqdns = [for record in aws_route53_record.validation : record.fqdn]
 }

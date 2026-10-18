@@ -3,7 +3,7 @@ data "terraform_remote_state" "shared" {
   config = {
     bucket = "motifpath-terraform-state"
     key    = "shared/terraform.tfstate"
-    region = "us-east-1"
+    region = "us-east-2"
   }
 }
 
@@ -13,9 +13,12 @@ locals {
 
 module "environment" {
   source = "../../modules/environment"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
 
   environment              = "production"
-  region                   = local.shared.region
   domain_name              = local.shared.domain_name
   zone_id                  = local.shared.zone_id
   vm_public_ip             = local.shared.vm_public_ip

@@ -4,7 +4,9 @@ Terraform infrastructure for MotifPath. All cloud resources are managed here.
 
 ## Infrastructure
 
-MotifPath is hosted in one AWS account in `us-east-1`. A single arm64 EC2 VM runs both
+MotifPath is hosted in one AWS account in `us-east-2`, the Region the AWS project is pinned
+to (regional resources cannot be created anywhere else). Only the CloudFront certificates are
+issued in `us-east-1`, the one Region CloudFront accepts them from. A single arm64 EC2 VM runs both
 **staging** and **production** as separate Docker Compose projects. The Compose files and the
 deploy script are in [motifpath-core `deploy/`](../motifpath-core/deploy/README.md). This
 repository creates everything around the VM.

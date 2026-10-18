@@ -1,7 +1,10 @@
 # MotifPath Infra — Claude Code Instructions
 
 ## Purpose
-Terraform configurations for all MotifPath cloud infrastructure, in one AWS account (`us-east-1`).
+Terraform configurations for all MotifPath cloud infrastructure, in one AWS account (`us-east-2`).
+The account is an AWS project in the new AWS experience: an AWS-managed SCP denies regional
+resources outside `us-east-2`. The only `us-east-1` resources are CloudFront's ACM certificates,
+created through the `aws.us_east_1` provider alias — NEVER put anything else there.
 One arm64 EC2 VM runs both staging and production as Docker Compose projects (the Compose files
 and deploy script live in motifpath-core `deploy/`). Around it: one RDS Postgres instance holding
 a database per environment, ECR, S3 + CloudFront for the SPA and media, Route 53, SSM Parameter

@@ -8,11 +8,6 @@ variable "environment" {
   }
 }
 
-variable "region" {
-  description = "AWS region everything runs in."
-  type        = string
-}
-
 variable "domain_name" {
   description = "Root domain; production uses its first-level names, staging the ones under staging."
   type        = string

@@ -16,7 +16,7 @@ set -euo pipefail
 env=${1:-}
 [[ $env == staging || $env == production ]] || { echo "usage: $0 <staging|production>" >&2; exit 2; }
 
-region=us-east-1
+region=us-east-2
 local_port=15432
 param() {
 	aws ssm get-parameter --region "$region" --with-decryption \

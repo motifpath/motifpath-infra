@@ -4,9 +4,9 @@
 
 locals {
   name   = "motifpath"
-  region = "us-east-1"
+  region = "us-east-2"
   # The first zone hosts the VM and the database.
-  availability_zones = ["us-east-1a", "us-east-1b"]
+  availability_zones = ["us-east-2a", "us-east-2b"]
 }
 
 module "network" {
