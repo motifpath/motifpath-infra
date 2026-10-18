@@ -17,15 +17,15 @@ repository creates everything around the VM.
 | RDS Postgres 16 `db.t4g.micro` | `shared` | One instance; databases `motifpath_staging` and `motifpath_production` |
 | Route 53 zone `motifpath.com` | `shared` | Every DNS record, including apex/www and `_dmarc` |
 | ECR | `shared` | `motifpath/{core-domain,event-ingestion,aggregation-worker}`, immutable tags |
-| GitHub OIDC provider + ECR push role | `shared` | Image builds from motifpath-core's `stage`/`main` |
+| ECR push IAM user | `shared` | Image builds from motifpath-core's `stage`/`main` (key in its GitHub environment `images`) |
 | AWS Budget | `shared` | Monthly spend alerts |
 | S3 + CloudFront (SPA, media) | per env | `app.`/`staging.` and `media.`/`media.staging.` |
 | API DNS records | per env | `api.`, `events.` (and `.staging.`) → the VM |
 | SSM Parameter Store | per env | `/motifpath/<env>/…`, rendered into the env's secrets file at deploy |
 | Media IAM user | per env | core-domain's credentials, limited to that env's media bucket |
-| Deploy document | per env | The only command a deploy role can send to the VM; deploys a SHA from the env's release branches |
+| Deploy document | per env | The only command a deploy user can send to the VM; deploys a SHA from the env's release branches |
 | CloudWatch log groups | per env | `/motifpath/<env>` and `/motifpath/edge` |
-| Deploy roles | per env | motifpath-core (its deploy document; production also tags images it deploys) and motifpath-web (S3 sync + invalidation) |
+| Deploy IAM users | per env | motifpath-core (its deploy document; production also tags images it deploys) and motifpath-web (S3 sync + invalidation) |
 
 Not managed here (yet): **MongoDB Atlas** clusters (Flex for production, M0 for staging,
 allow-listed to the VM's Elastic IP) and **Clerk**. Kafka is a Redpanda container per environment
@@ -136,10 +136,22 @@ Nothing here exists yet. Run these once, in order.
 
    Create the Atlas clusters first, and allow-list `terraform -chdir=environments/shared output -raw vm_public_ip`.
 
-7. **GitHub (motifpath-core).** Set the repository variable `AWS_ECR_PUSH_ROLE_ARN` from
-   `shared`'s `ecr_push_role_arn`. Create GitHub environments `staging` and `production`, each
-   with `AWS_DEPLOY_ROLE_ARN` (that environment's `core_deploy_role_arn`) and `VM_INSTANCE_ID`
-   (`shared`'s `vm_instance_id`).
+7. **GitHub (motifpath-core).** CI signs in with IAM-user keys kept as GitHub *environment*
+   secrets (this project does not allow GitHub's OIDC provider). Create three environments, each
+   limited under **Deployment branches** to the branches shown:
+
+   | Environment | Branches | Secrets `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` from | Variable |
+   |---|---|---|---|
+   | `images` | `stage`, `main` | `shared`: `ecr_push_access_key_id` / `ecr_push_secret_access_key` | — |
+   | `staging` | `stage`, `main` | `staging`: `core_deploy_access_key_id` / `core_deploy_secret_access_key` | `VM_INSTANCE_ID` |
+   | `production` | `main` | `production`: `core_deploy_access_key_id` / `core_deploy_secret_access_key` | `VM_INSTANCE_ID` |
+
+   Read a secret with `terraform output -raw <name>`; `VM_INSTANCE_ID` is `shared`'s
+   `vm_instance_id`. Add required reviewers to `production`. motifpath-web gets the
+   `web_deploy_*` keys the same way, in its own `staging` and `production` environments.
+
+   **Rotating a key:** `terraform apply -replace='module.<path>.aws_iam_access_key.this'`, then
+   update the secrets.
 
 ## Commands
 
@@ -159,8 +171,8 @@ cd environments/staging && terraform apply
 
 1. Make infrastructure changes in a feature branch
 2. Run `terraform fmt -recursive` and `terraform validate` locally
-3. Open a PR — CI runs format check and validation automatically (and a plan, once
-   `AWS_PLAN_ROLE_ARN` is set)
+3. Open a PR — CI runs format check and validation automatically (and a plan, once a read-only
+   key is in the GitHub environment `plan` and `TF_PLAN_ENABLED` is `true`)
 4. Get PR approval
 5. Apply `shared` if it changed, then staging: `cd environments/staging && terraform apply`
 6. Verify staging is healthy
@@ -173,7 +185,7 @@ cd environments/staging && terraform apply
 - Containers cannot reach the instance role: the metadata hop limit is 1, so only the host can
   use it (to render secrets, pull images and ship logs). core-domain uses its own environment's
   media IAM user instead.
-- Deploy roles cannot run arbitrary commands. Each environment has one SSM document. It takes only
+- Deploy users cannot run arbitrary commands. Each environment has one SSM document. It takes only
   an image SHA, refuses a SHA that is not on that environment's branches (`main` for production;
   `stage` or `main` for staging), and fetches `deploy/` from that commit on GitHub. Code reaches the
   host only by being merged to those branches.

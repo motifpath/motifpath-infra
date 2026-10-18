@@ -58,12 +58,13 @@ output "ecr_repository_arns" {
   value       = module.ecr.repository_arns
 }
 
-output "github_oidc_provider_arn" {
-  description = "ARN of the GitHub Actions OIDC provider."
-  value       = module.github_oidc.arn
+output "ecr_push_access_key_id" {
+  description = "AWS_ACCESS_KEY_ID secret of motifpath-core's GitHub environment `images`."
+  value       = module.ecr_push_user.access_key_id
 }
 
-output "ecr_push_role_arn" {
-  description = "Value for the backend repository's variable AWS_ECR_PUSH_ROLE_ARN."
-  value       = module.ecr_push_role.arn
+output "ecr_push_secret_access_key" {
+  description = "AWS_SECRET_ACCESS_KEY secret of motifpath-core's GitHub environment `images`."
+  value       = module.ecr_push_user.secret_access_key
+  sensitive   = true
 }

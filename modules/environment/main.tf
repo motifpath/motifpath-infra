@@ -128,14 +128,14 @@ module "deploy_document" {
 
 # motifpath-core's deploy workflow, from its GitHub environment of the same
 # name. It can start this environment's deploy document on the VM and nothing
-# else there. Production's role also adds a protecting tag to the images it
-# deploys, so image expiry never removes what production runs.
-module "core_deploy_role" {
-  source = "../github_role"
+# else there, so a leaked key can only deploy commits already on this
+# environment's release branches. Production's user also adds a protecting
+# tag to the images it deploys, so image expiry never removes what
+# production runs.
+module "core_deploy_user" {
+  source = "../ci_user"
 
-  name              = "${local.name}-core-deploy"
-  oidc_provider_arn = var.github_oidc_provider_arn
-  subjects          = ["repo:${var.core_repository}:environment:${var.environment}"]
+  name = "${local.name}-core-deploy"
   policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = concat([
@@ -167,13 +167,13 @@ module "core_deploy_role" {
 }
 
 # motifpath-web's deploy workflow: publish the built SPA and invalidate the
-# cache in front of it.
-module "web_deploy_role" {
-  source = "../github_role"
+# cache in front of it. Whoever holds this key controls the JavaScript every
+# user runs, so its GitHub environment should only be usable from the
+# release branches.
+module "web_deploy_user" {
+  source = "../ci_user"
 
-  name              = "${local.name}-web-deploy"
-  oidc_provider_arn = var.github_oidc_provider_arn
-  subjects          = ["repo:${var.web_repository}:environment:${var.environment}"]
+  name = "${local.name}-web-deploy"
   policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [

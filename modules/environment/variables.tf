@@ -43,21 +43,10 @@ variable "ecr_repository_arns" {
   type        = map(string)
 }
 
-variable "github_oidc_provider_arn" {
-  description = "ARN of the GitHub Actions OIDC provider."
-  type        = string
-}
-
 variable "core_repository" {
   description = "GitHub owner/name of the backend repository."
   type        = string
   default     = "motifpath/motifpath-core"
-}
-
-variable "web_repository" {
-  description = "GitHub owner/name of the SPA repository."
-  type        = string
-  default     = "motifpath/motifpath-web"
 }
 
 variable "database_address" {

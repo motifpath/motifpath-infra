@@ -129,21 +129,13 @@ module "instance_shared_access" {
   })
 }
 
-module "github_oidc" {
-  source = "../../modules/github_oidc_provider"
-}
+# Image builds sign in with this user's key, kept in a GitHub environment
+# that only the release branches can use. It can push to the service
+# repositories and nothing else.
+module "ecr_push_user" {
+  source = "../../modules/ci_user"
 
-# Image builds run on pushes to the release branches only, so no other
-# branch can publish an image.
-module "ecr_push_role" {
-  source = "../../modules/github_role"
-
-  name              = "${local.name}-core-ecr-push"
-  oidc_provider_arn = module.github_oidc.arn
-  subjects = [
-    "repo:${var.core_repository}:ref:refs/heads/stage",
-    "repo:${var.core_repository}:ref:refs/heads/main",
-  ]
+  name = "${local.name}-core-ecr-push"
   policy_json = jsonencode({
     Version = "2012-10-17"
     Statement = [

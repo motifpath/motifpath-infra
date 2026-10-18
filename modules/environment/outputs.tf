@@ -29,14 +29,26 @@ output "media_bucket_name" {
   value       = module.media.bucket_name
 }
 
-output "core_deploy_role_arn" {
-  description = "Value for the backend repository's GitHub environment variable AWS_DEPLOY_ROLE_ARN."
-  value       = module.core_deploy_role.arn
+output "core_deploy_access_key_id" {
+  description = "Key ID motifpath-core's deploy workflow signs in with."
+  value       = module.core_deploy_user.access_key_id
 }
 
-output "web_deploy_role_arn" {
-  description = "Role the SPA repository's deploy workflow assumes."
-  value       = module.web_deploy_role.arn
+output "core_deploy_secret_access_key" {
+  description = "Secret of that key."
+  value       = module.core_deploy_user.secret_access_key
+  sensitive   = true
+}
+
+output "web_deploy_access_key_id" {
+  description = "Key ID motifpath-web's deploy workflow signs in with."
+  value       = module.web_deploy_user.access_key_id
+}
+
+output "web_deploy_secret_access_key" {
+  description = "Secret of that key."
+  value       = module.web_deploy_user.secret_access_key
+  sensitive   = true
 }
 
 output "deploy_document_name" {

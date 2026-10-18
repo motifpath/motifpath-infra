@@ -24,14 +24,26 @@ output "spa_distribution_id" {
   value       = module.environment.spa_distribution_id
 }
 
-output "core_deploy_role_arn" {
-  description = "Value for motifpath-core's GitHub environment variable AWS_DEPLOY_ROLE_ARN."
-  value       = module.environment.core_deploy_role_arn
+output "core_deploy_access_key_id" {
+  description = "AWS_ACCESS_KEY_ID secret of motifpath-core's GitHub environment for this environment."
+  value       = module.environment.core_deploy_access_key_id
 }
 
-output "web_deploy_role_arn" {
-  description = "Role motifpath-web's deploy workflow assumes."
-  value       = module.environment.web_deploy_role_arn
+output "core_deploy_secret_access_key" {
+  description = "AWS_SECRET_ACCESS_KEY secret of motifpath-core's GitHub environment for this environment."
+  value       = module.environment.core_deploy_secret_access_key
+  sensitive   = true
+}
+
+output "web_deploy_access_key_id" {
+  description = "AWS_ACCESS_KEY_ID secret of motifpath-web's GitHub environment for this environment."
+  value       = module.environment.web_deploy_access_key_id
+}
+
+output "web_deploy_secret_access_key" {
+  description = "AWS_SECRET_ACCESS_KEY secret of motifpath-web's GitHub environment for this environment."
+  value       = module.environment.web_deploy_secret_access_key
+  sensitive   = true
 }
 
 output "deploy_document_name" {

@@ -8,7 +8,8 @@ created through the `aws.us_east_1` provider alias — NEVER put anything else t
 One arm64 EC2 VM runs both staging and production as Docker Compose projects (the Compose files
 and deploy script live in motifpath-core `deploy/`). Around it: one RDS Postgres instance holding
 a database per environment, ECR, S3 + CloudFront for the SPA and media, Route 53, SSM Parameter
-Store for secrets, and GitHub OIDC roles. Kafka is a Redpanda container per environment on the VM
+Store for secrets, and IAM users whose keys GitHub Actions uses (the project's SCP denies GitHub's
+OIDC provider, so there are no OIDC roles; one narrowly scoped user per CI job). Kafka is a Redpanda container per environment on the VM
 — do not provision MSK. MongoDB Atlas clusters are created by hand for now (not in Terraform).
 
 ## Directory Structure
@@ -17,7 +18,7 @@ bootstrap/            → the state bucket; applied once, first
 modules/              → reusable Terraform modules (one per resource type);
                         modules/environment composes them into one hosted environment
 environments/
-  shared/             → what both environments use: network, VM, RDS, DNS zone, ECR, OIDC, budget
+  shared/             → what both environments use: network, VM, RDS, DNS zone, ECR, CI push user, budget
   staging/            → staging's own resources (reads shared's outputs via remote state)
   production/         → production's own resources
 scripts/              → operator helpers (e.g. creating an environment's database)
@@ -58,9 +59,9 @@ They share one VM, so these hold on it:
 - Containers cannot reach the instance role (IMDS hop limit 1). Only the host can, and it can
   read both environments' secrets. Services get their own narrow credentials (e.g. the
   per-environment media IAM user); NEVER raise the hop limit or grant a container the role.
-- Deploy roles may only send their environment's fixed deploy document, which takes an image SHA,
+- Deploy users may only send their environment's fixed deploy document, which takes an image SHA,
   checks it is on that environment's release branches, and fetches deploy files itself.
-  NEVER grant a deploy role `AWS-RunShellScript` or any document that runs caller-supplied code.
+  NEVER grant a deploy user `AWS-RunShellScript` or any document that runs caller-supplied code.
 
 ## Key Rules
 NEVER use `terraform apply -auto-approve` in any environment.

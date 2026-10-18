@@ -4,12 +4,6 @@ variable "domain_name" {
   default     = "motifpath.com"
 }
 
-variable "core_repository" {
-  description = "GitHub owner/name of the backend repository whose release branches may push images."
-  type        = string
-  default     = "motifpath/motifpath-core"
-}
-
 variable "dmarc_record" {
   description = "Value of the _dmarc TXT record, unquoted. Carried over from the previous DNS host with its rua address pointed at a MotifPath mailbox."
   type        = string

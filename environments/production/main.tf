@@ -18,15 +18,14 @@ module "environment" {
     aws.us_east_1 = aws.us_east_1
   }
 
-  environment              = "production"
-  domain_name              = local.shared.domain_name
-  zone_id                  = local.shared.zone_id
-  vm_public_ip             = local.shared.vm_public_ip
-  vm_instance_arn          = local.shared.vm_instance_arn
-  instance_role_name       = local.shared.vm_role_name
-  ecr_registry             = local.shared.ecr_registry
-  ecr_repository_arns      = local.shared.ecr_repository_arns
-  github_oidc_provider_arn = local.shared.github_oidc_provider_arn
-  database_address         = local.shared.database_address
-  database_port            = local.shared.database_port
+  environment         = "production"
+  domain_name         = local.shared.domain_name
+  zone_id             = local.shared.zone_id
+  vm_public_ip        = local.shared.vm_public_ip
+  vm_instance_arn     = local.shared.vm_instance_arn
+  instance_role_name  = local.shared.vm_role_name
+  ecr_registry        = local.shared.ecr_registry
+  ecr_repository_arns = local.shared.ecr_repository_arns
+  database_address    = local.shared.database_address
+  database_port       = local.shared.database_port
 }
