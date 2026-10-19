@@ -11,6 +11,21 @@ locals {
   shared = data.terraform_remote_state.shared.outputs
 }
 
+# The production Clerk instance serves sign-in from these hostnames and signs
+# its email with these DKIM keys; Clerk verifies each target exactly.
+module "clerk_records" {
+  source = "../../modules/dns_records"
+
+  zone_id = local.shared.zone_id
+  records = {
+    accounts = { name = "accounts.${local.shared.domain_name}", type = "CNAME", values = ["accounts.clerk.services"] }
+    frontend = { name = "clerk.${local.shared.domain_name}", type = "CNAME", values = ["frontend-api.clerk.services"] }
+    dkim1    = { name = "clk._domainkey.${local.shared.domain_name}", type = "CNAME", values = ["dkim1.7tcy7qv1sd3l.clerk.services"] }
+    dkim2    = { name = "clk2._domainkey.${local.shared.domain_name}", type = "CNAME", values = ["dkim2.7tcy7qv1sd3l.clerk.services"] }
+    mail     = { name = "clkmail.${local.shared.domain_name}", type = "CNAME", values = ["mail.7tcy7qv1sd3l.clerk.services"] }
+  }
+}
+
 module "environment" {
   source = "../../modules/environment"
   providers = {
