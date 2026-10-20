@@ -20,6 +20,8 @@ repository creates everything around the VM.
 | ECR push IAM user | `shared` | Image builds from motifpath-core's `stage`/`main` (key in its GitHub environment `images`) |
 | AWS Budget | `shared` | Monthly spend alerts |
 | S3 + CloudFront (SPA, media) | per env | `app.`/`staging.` and `media.`/`media.staging.` |
+| Mail DNS (GoDaddy business email) | `shared` | Apex SPF/verification TXT, MX, DKIM, autodiscover; DMARC via `dmarc_record` |
+| Clerk DNS | `production` | Frontend API, accounts, mail and DKIM CNAMEs for the production Clerk instance |
 | API DNS records | per env | `api.`, `events.` (and `.staging.`) → the VM |
 | SSM Parameter Store | per env | `/motifpath/<env>/…`, rendered into the env's secrets file at deploy |
 | Media IAM user | per env | core-domain's credentials, limited to that env's media bucket |

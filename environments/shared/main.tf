@@ -53,6 +53,47 @@ module "root_records" {
   }
 }
 
+# Business email is hosted by GoDaddy: their verification and SPF at the
+# apex, MX, client autodiscovery and DKIM. The DMARC policy above covers the
+# same mail.
+module "mail_records" {
+  source = "../../modules/dns_records"
+
+  zone_id = module.dns_zone.zone_id
+  records = {
+    apex_txt = {
+      name   = var.domain_name
+      type   = "TXT"
+      values = ["T4368907", "v=spf1 include:secureserver.net -all"]
+    }
+    mx = {
+      name   = var.domain_name
+      type   = "MX"
+      values = ["0 smtp.secureserver.net", "10 mailstore1.secureserver.net"]
+    }
+    webmail = {
+      name   = "email.${var.domain_name}"
+      type   = "CNAME"
+      values = ["email.secureserver.net"]
+    }
+    dkim1 = {
+      name   = "secureserver1._domainkey.${var.domain_name}"
+      type   = "CNAME"
+      values = ["s1.dkim.motifpath_com.d51.onsecureserver.net"]
+    }
+    dkim2 = {
+      name   = "secureserver2._domainkey.${var.domain_name}"
+      type   = "CNAME"
+      values = ["s2.dkim.motifpath_com.d51.onsecureserver.net"]
+    }
+    autodiscover = {
+      name   = "_autodiscover._tcp.${var.domain_name}"
+      type   = "SRV"
+      values = ["100 1 443 autodiscover.secureserver.net"]
+    }
+  }
+}
+
 module "ecr" {
   source = "../../modules/ecr"
 
