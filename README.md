@@ -125,6 +125,14 @@ Nothing here exists yet. Run these once, in order.
    scripts/create-environment-database.sh production
    ```
 
+   Once you have signed in to an environment's app, make yourself its admin. The app never
+   grants admin itself:
+
+   ```bash
+   scripts/promote-admin.sh production                    # lists the newest users
+   scripts/promote-admin.sh production user_2abc…         # asks, then promotes that user
+   ```
+
 6. **Hand-set secrets.** Terraform creates these with the value `SET_ME` and never overwrites
    them afterwards:
 
