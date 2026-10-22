@@ -21,7 +21,7 @@ environments/
   shared/             → what both environments use: network, VM, RDS, DNS zone, ECR, CI push user, budget
   staging/            → staging's own resources (reads shared's outputs via remote state)
   production/         → production's own resources
-scripts/              → operator helpers (e.g. creating an environment's database)
+scripts/              → operator helpers (creating an environment's database, promoting an admin)
 ```
 Apply order: `bootstrap` → `environments/shared` → `environments/staging` → `environments/production`.
 
