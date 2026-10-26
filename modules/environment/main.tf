@@ -21,6 +21,13 @@ resource "random_password" "database" {
   special = false
 }
 
+# Signs the unsubscribe links in the platform's emails. Replacing it breaks
+# every link already sent, so never rotate it casually.
+resource "random_password" "email_unsubscribe" {
+  length  = 48
+  special = false
+}
+
 module "spa" {
   source = "../cdn_bucket"
   providers = {
@@ -73,6 +80,15 @@ module "media_user" {
   bucket_arn = module.media.bucket_arn
 }
 
+module "mail_sender" {
+  source = "../mail_sender"
+
+  domain             = "mail.${local.suffix}"
+  zone_id            = var.zone_id
+  user_name          = "${local.name}-mail"
+  allowed_recipients = var.mail_allowed_recipients
+}
+
 # Rendered into the environment's secrets file on every deploy.
 module "parameters" {
   source = "../ssm_parameters"
@@ -82,10 +98,15 @@ module "parameters" {
     ECR_REGISTRY            = var.ecr_registry
     MEDIA_S3_BUCKET         = module.media.bucket_name
     MEDIA_AWS_ACCESS_KEY_ID = module.media_user.access_key_id
+    SMTP_HOST               = module.mail_sender.smtp_host
+    SMTP_USERNAME           = module.mail_sender.smtp_username
+    MAIL_FROM_ADDRESS       = module.mail_sender.from_address
   }
   secure_parameters = {
     DATABASE_URL                = "postgres://${local.db_name}:${random_password.database.result}@${var.database_address}:${var.database_port}/${local.db_name}?sslmode=require"
     MEDIA_AWS_SECRET_ACCESS_KEY = module.media_user.secret_access_key
+    SMTP_PASSWORD               = module.mail_sender.smtp_password
+    EMAIL_UNSUBSCRIBE_SECRET    = random_password.email_unsubscribe.result
   }
   manual_parameters = ["CLERK_SECRET_KEY", "MONGO_URI"]
 }
