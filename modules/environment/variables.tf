@@ -58,3 +58,14 @@ variable "database_port" {
   description = "Port of the shared Postgres instance."
   type        = number
 }
+
+variable "mail_allowed_recipients" {
+  description = "Address patterns every recipient of this environment's email must match, or null for any recipient. Every environment but production must set it, so only production can mail real users."
+  type        = list(string)
+  default     = null
+
+  validation {
+    condition     = var.environment == "production" || var.mail_allowed_recipients != null
+    error_message = "Only production may send to any recipient; set mail_allowed_recipients."
+  }
+}

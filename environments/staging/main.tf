@@ -28,4 +28,7 @@ module "environment" {
   ecr_repository_arns = local.shared.ecr_repository_arns
   database_address    = local.shared.database_address
   database_port       = local.shared.database_port
+
+  # Staging may only mail the team, never a real user.
+  mail_allowed_recipients = ["*@${local.shared.domain_name}"]
 }
