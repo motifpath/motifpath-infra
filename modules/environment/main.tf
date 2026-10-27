@@ -48,10 +48,17 @@ module "media" {
     aws.us_east_1 = aws.us_east_1
   }
 
-  bucket_name            = "${local.name}-content-media"
-  domain_name            = local.hosts.media
-  zone_id                = var.zone_id
-  upload_allowed_origins = ["https://${local.hosts.app}"]
+  bucket_name = "${local.name}-content-media"
+  domain_name = local.hosts.media
+  zone_id     = var.zone_id
+  # The iOS and Android apps run the same SPA in a WebView, whose page origin
+  # is capacitor://localhost on iOS and https://localhost on Android. They
+  # upload with the WebView's own requests, so the bucket must allow those too.
+  upload_allowed_origins = [
+    "https://${local.hosts.app}",
+    "capacitor://localhost",
+    "https://localhost",
+  ]
   # The SPA reads media (voice samples, images) cross-origin from its own
   # hostname.
   cors_allow_any_origin = true
