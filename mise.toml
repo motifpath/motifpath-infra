@@ -1,0 +1,3 @@
+[tools]
+# Keep in step with TERRAFORM_VERSION in .github/workflows/ci.yml.
+terraform = "1.16.6"
