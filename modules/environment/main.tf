@@ -101,14 +101,18 @@ module "parameters" {
   source = "../ssm_parameters"
 
   path = "/motifpath/${var.environment}"
-  string_parameters = {
-    ECR_REGISTRY            = var.ecr_registry
-    MEDIA_S3_BUCKET         = module.media.bucket_name
-    MEDIA_AWS_ACCESS_KEY_ID = module.media_user.access_key_id
-    SMTP_HOST               = module.mail_sender.smtp_host
-    SMTP_USERNAME           = module.mail_sender.smtp_username
-    MAIL_FROM_ADDRESS       = module.mail_sender.from_address
-  }
+  string_parameters = merge(
+    {
+      ECR_REGISTRY            = var.ecr_registry
+      MEDIA_S3_BUCKET         = module.media.bucket_name
+      MEDIA_AWS_ACCESS_KEY_ID = module.media_user.access_key_id
+      SMTP_HOST               = module.mail_sender.smtp_host
+      SMTP_USERNAME           = module.mail_sender.smtp_username
+      MAIL_FROM_ADDRESS       = module.mail_sender.from_address
+    },
+    # A parameter can't be empty, so an environment without a concierge has none.
+    var.concierge_email == null ? {} : { CONCIERGE_EMAIL = var.concierge_email },
+  )
   secure_parameters = {
     DATABASE_URL                = "postgres://${local.db_name}:${random_password.database.result}@${var.database_address}:${var.database_port}/${local.db_name}?sslmode=require"
     MEDIA_AWS_SECRET_ACCESS_KEY = module.media_user.secret_access_key
