@@ -31,4 +31,5 @@ module "environment" {
 
   # Staging may only mail the team, never a real user.
   mail_allowed_recipients = ["*@${local.shared.domain_name}"]
+  concierge_email         = "hello@${local.shared.domain_name}"
 }

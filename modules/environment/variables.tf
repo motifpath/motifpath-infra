@@ -69,3 +69,9 @@ variable "mail_allowed_recipients" {
     error_message = "Only production may send to any recipient; set mail_allowed_recipients."
   }
 }
+
+variable "concierge_email" {
+  description = "Address the weekly student summary goes to, or null to send none. Outside production it must match mail_allowed_recipients, or SES refuses it."
+  type        = string
+  default     = null
+}

@@ -43,4 +43,6 @@ module "environment" {
   ecr_repository_arns = local.shared.ecr_repository_arns
   database_address    = local.shared.database_address
   database_port       = local.shared.database_port
+
+  concierge_email = "hello@${local.shared.domain_name}"
 }
