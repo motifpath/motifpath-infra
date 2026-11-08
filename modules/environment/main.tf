@@ -28,6 +28,13 @@ resource "random_password" "email_unsubscribe" {
   special = false
 }
 
+# Signs the continuation cursors of the commercial audit API. Rotating it only
+# invalidates cursors in flight, which callers recover from by starting over.
+resource "random_password" "commercial_cursor" {
+  length  = 48
+  special = false
+}
+
 module "spa" {
   source = "../cdn_bucket"
   providers = {
@@ -118,6 +125,7 @@ module "parameters" {
     MEDIA_AWS_SECRET_ACCESS_KEY = module.media_user.secret_access_key
     SMTP_PASSWORD               = module.mail_sender.smtp_password
     EMAIL_UNSUBSCRIBE_SECRET    = random_password.email_unsubscribe.result
+    COMMERCIAL_CURSOR_SECRET    = random_password.commercial_cursor.result
   }
   manual_parameters = ["CLERK_SECRET_KEY", "MONGO_URI"]
 }
